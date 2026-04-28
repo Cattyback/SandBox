@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARB ENGINE v2 // RetroValix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+<!-- Three.js + addons + simplex-noise via importmap (jsdelivr = more reliable for file://) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "simplex-noise": "https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/esm/simplex-noise.js"
+  }
+}
+</script>
+
+<!-- Surface any module / runtime error visibly inside #panelC -->
+<script>
+function __showCError(msg) {
+  const c = document.getElementById('panelC');
+  if (!c) return;
+  let box = document.getElementById('__c_err');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = '__c_err';
+    box.style.cssText = 'position:absolute;top:24px;left:8px;right:8px;color:#f66;font-size:9px;line-height:1.5;white-space:pre-wrap;z-index:100;background:rgba(0,0,0,0.7);padding:6px;border:1px solid #533;';
+    c.appendChild(box);
+  }
+  box.textContent += msg + '\n';
+}
+window.addEventListener('error', e => {
+  // Script/module/link load failure — event target has src/href
+  if (e.target && (e.target.src || e.target.href)) {
+    __showCError('LOAD FAIL: ' + (e.target.src || e.target.href));
+    return;
+  }
+  const where = e.filename ? e.filename.split('/').pop() + ':' + e.lineno : '';
+  __showCError('ERR  ' + (e.message || '(no message)') + '\n     ' + where);
+}, true);
+window.addEventListener('unhandledrejection', e => {
+  __showCError('REJ  ' + (e.reason && e.reason.message || e.reason));
+});
+
+// Watchdog: if #__c_ok "WEBGL INIT…" never appears within 6s, the module never booted
+setTimeout(() => {
+  if (!document.getElementById('__c_ok')) {
+    __showCError('WATCHDOG: module never executed.\n' +
+      'Likely cause: browser blocked HTTPS module imports from file://.\n' +
+      'Fix: run a local server →  python -m http.server 8000');
+  }
+}, 6000);
+</script>
+</head>
+<body>
+
+<!-- ══════════════ HEADER (spans full width) ══════════════ -->
+<div class="hdr">
+  <span class="brand">ARB ENGINE v2 // @RetroValix</span>
+  <span>BLOCK <span id="blockNum">824,333</span> &nbsp;|&nbsp; VOL <span id="volVal">$3.72B</span> &nbsp;|&nbsp; EDGE <span id="edgeVal">7.4</span>%</span>
+  <span class="api-status">
+    <span class="api-dot api-ok" id="okxDot"></span>OKX
+    &nbsp;<span class="api-dot api-ok" id="bmDot"></span>BAYES
+    &nbsp;<span class="api-dot api-ok" id="wsDot"></span>WS
+    &nbsp;<span class="live">● LIVE</span>
+  </span>
+</div>
+
+<!-- ══════════════ A · 用户操作区 ══════════════ -->
+<div id="panelA">
+  <div class="panel-label">A · USER OPS</div>
+  <div class="ops-content">
+    <button id="killBtn" class="kill-btn" type="button">
+      <div class="kill-main">STOP ALL</div>
+      <div class="kill-sub">KILL SWITCH</div>
+    </button>
+    <div id="killStatus" class="kill-status">● TRADING · LIVE</div>
+  </div>
+</div>
+
+<!-- ══════════════ B · 市场实时数据区 ══════════════ -->
+<div id="panelB">
+  <div class="panel-label">B · MARKET DATA</div>
+
+  <div id="panelB-normal">
+
+  <!-- TOP ROW: BTC Regime | Last Filter Decision | Position Sizing -->
+  <div class="top-row">
+    <div class="panel">
+      <div class="ptitle">BTC REGIME</div>
+      <div class="psub">volatility bucket → filter sizing</div>
+      <div id="regimeBody"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">LAST FILTER DECISION</div>
+      <div class="psub">pre-trade allow / reject</div>
+      <div id="filterBody"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">POSITION SIZING</div>
+      <div class="psub">live · balance → stake → notional</div>
+      <div id="sizingBody"></div>
+    </div>
+  </div>
+
+  <!-- MID ROW: Factors | Signals -->
+  <div class="mid-row">
+    <div class="factor-panel">
+      <div class="factor-title">STRATEGY FACTORS</div>
+      <div class="factor-sec">TRIGGER CONDITIONS</div>
+      <div id="triggerRows"></div>
+      <div class="factor-sec">BTC REGIME</div>
+      <div id="btcRegRows"></div>
+      <div class="factor-sec">PORTFOLIO</div>
+      <div id="portfolioRows"></div>
+      <div class="factor-sec">FUNDING EXTREMES</div>
+      <div id="fundingRows"></div>
+    </div>
+
+    <div class="signal-panel">
+      <div class="signal-title">LIVE SIGNALS</div>
+      <div id="signalRows"></div>
+
+      <div style="border-top:1px solid #0f0f0f;margin-top:6px;padding-top:5px;">
+        <div class="factor-name" style="color:#2a2a2a;margin-bottom:3px;">EXECUTION ENGINE</div>
+        <div class="stat-row"><span style="color:#2a2a2a;">Mode</span><span class="sg">DRY-RUN</span></div>
+        <div class="stat-row"><span style="color:#2a2a2a;">Latency</span><span class="so" id="latVal">3.2ms</span></div>
+        <div class="stat-row"><span style="color:#2a2a2a;">Slip</span><span class="sv">0.02%</span></div>
+        <div class="stat-row"><span style="color:#2a2a2a;">Fill Rate</span><span class="sg">98.7%</span></div>
+
+        <div style="border-top:1px solid #0f0f0f;margin-top:5px;padding-top:4px;">
+          <div class="factor-name" style="color:#2a2a2a;margin-bottom:2px;">RISK LIMITS</div>
+          <div class="stat-row"><span style="color:#2a2a2a;">Max DD</span><span class="sv">15%</span></div>
+          <div class="stat-row"><span style="color:#2a2a2a;">Max Pos</span><span class="sv">3</span></div>
+          <div class="stat-row"><span style="color:#2a2a2a;">Drawdown</span><span class="sg" id="ddVal">0.3%</span></div>
+          <div class="stat-row"><span style="color:#2a2a2a;">Circuit Dist</span><span class="sg" id="cdVal">14.7%</span></div>
+        </div>
+      </div>
+
+      <div class="positions-block">
+        <div class="positions-block-head">
+          <span class="pb-label">OPEN POSITIONS</span>
+          <span class="pb-count" id="pbCount">0</span>
+        </div>
+        <div id="openPosRows"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOT ROW: Log | PnL | Bots -->
+  <div class="bot-row">
+    <div class="panel log-panel">
+      <div class="log-head">STRATEGY LOG</div>
+      <div id="logArea"></div>
+    </div>
+    <div class="panel pnl-panel">
+      <div class="pnl-label">P&amp;L · 3 BOTS + BTC HODL</div>
+      <div class="pnl-num" id="pnlNum">$74,523</div>
+      <div class="pnl-from" id="pnlFrom">from $2,440 · ROI 2954.3%</div>
+      <canvas id="pnlC"></canvas>
+      <div class="pnl-legend">
+        <span class="lg-v3">■</span> v3 live &nbsp;
+        <span class="lg-test">■</span> test(filter) &nbsp;
+        <span class="lg-nfi">■</span> NFI &nbsp;
+        <span class="lg-btc">—</span> BTC HODL
+      </div>
+    </div>
+    <div class="stat-panel">
+      <div class="stat-title">BOTS</div>
+      <div id="botRows"></div>
+      <div class="bot-sep"></div>
+      <div class="stat-title" style="margin-top:8px">TOP COINS</div>
+      <div id="rankTradesRows"></div>
+    </div>
+  </div>
+
+  <!-- API STATUS -->
+  <div class="api-panel">
+    <div class="api-source"><div class="api-src-name">OKX REST</div><div class="api-src-val api-src-ok" id="api-okx">CONNECTED</div><div class="api-src-lat" id="lat-okx">12ms</div></div>
+    <div class="api-source"><div class="api-src-name">OKX WS</div><div class="api-src-val api-src-ok" id="api-ws">STREAMING</div><div class="api-src-lat" id="lat-ws">3ms</div></div>
+  </div>
+
+  </div><!-- /panelB-normal -->
+
+  <div id="panelB-halted" class="halted-view" style="display:none"></div>
+</div>
+
+<!-- ══════════════ C · 粒子实时模拟区 ══════════════ -->
+<div id="panelC">
+  <div class="panel-label">C · PARTICLE SIM</div>
+  <!-- Three.js renderer's canvas gets appended here by C/C.js -->
+</div>
+
+<!-- ══════════════ TICKER (full-width bottom) ══════════════ -->
+<div class="ticker">
+  <div class="ticker-inner" id="tickerInner"></div>
+</div>
+
+<!-- ══════════════ SCRIPTS ══════════════ -->
+<script src="backend/backend.js"></script>
+<script src="backend/trader.js"></script>
+<script src="A/A.js"></script>
+<script src="B/B.js"></script>
+<script src="app.js"></script>
+
+<!-- C panel — Three.js scene. Active variant: C-形态1 (see C/variants/ for snapshots) -->
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass }      from 'three/addons/postprocessing/OutputPass.js';
+import { createNoise3D }   from 'simplex-noise';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+// ── Proof-of-life indicator ────────────────
+(() => {
+  const c = document.getElementById('panelC');
+  if (c) {
+    const dot = document.createElement('div');
+    dot.id = '__c_ok';
+    dot.style.cssText = 'position:absolute;top:4px;right:8px;color:#4dffd2;font-size:7px;letter-spacing:2px;z-index:20;';
+    dot.textContent = 'WEBGL INIT…';
+    c.appendChild(dot);
+  }
+})();
+
+const POINT_COUNT       = 2000;
+const CLOUD_RADIUS      = 12;
+const LINE_THRESHOLD    = 2.0;
+const LINE_THRESHOLD_SQ = LINE_THRESHOLD * LINE_THRESHOLD;
+const MAX_LINES         = 24000;
+const NOISE_SCALE       = 0.08;
+const NOISE_AMP         = 1.6;
+const NOISE_TIME_SPEED  = 0.14;
+
+const container = document.getElementById('panelC');
+let W = container.clientWidth;
+let H = container.clientHeight;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 1000);
+camera.position.set(0, 0, 34);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(W, H);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+container.appendChild(renderer.domElement);
+
+const origPositions = new Float32Array(POINT_COUNT * 3);
+const curPositions  = new Float32Array(POINT_COUNT * 3);
+const pointColors   = new Float32Array(POINT_COUNT * 3);
+for (let i = 0; i < POINT_COUNT; i++) {
+  let x, y, z;
+  do {
+    x = (Math.random() - 0.5) * 2 * CLOUD_RADIUS;
+    y = (Math.random() - 0.5) * 2 * CLOUD_RADIUS;
+    z = (Math.random() - 0.5) * 2 * CLOUD_RADIUS;
+  } while (x*x + y*y + z*z > CLOUD_RADIUS * CLOUD_RADIUS);
+  const o = i * 3;
+  origPositions[o]=x; origPositions[o+1]=y; origPositions[o+2]=z;
+  curPositions[o] =x; curPositions[o+1] =y; curPositions[o+2] =z;
+  pointColors[o]   = (x + CLOUD_RADIUS) / (2 * CLOUD_RADIUS);
+  pointColors[o+1] = (y + CLOUD_RADIUS) / (2 * CLOUD_RADIUS);
+  pointColors[o+2] = (z + CLOUD_RADIUS) / (2 * CLOUD_RADIUS);
+}
+
+// Per-point display color (mutated each frame to twinkle isolated points, dim clustered)
+const displayPointColors = new Float32Array(POINT_COUNT * 3);
+displayPointColors.set(pointColors);
+const neighborCount = new Uint8Array(POINT_COUNT);
+
+const pointsGeo = new THREE.BufferGeometry();
+pointsGeo.setAttribute('position', new THREE.BufferAttribute(curPositions, 3));
+pointsGeo.setAttribute('color',    new THREE.BufferAttribute(displayPointColors, 3));
+pointsGeo.getAttribute('position').setUsage(THREE.DynamicDrawUsage);
+pointsGeo.getAttribute('color').setUsage(THREE.DynamicDrawUsage);
+const pointsMat = new THREE.PointsMaterial({
+  size: 0.1, vertexColors: true, sizeAttenuation: true,
+  transparent: true, opacity: 0.95,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+scene.add(new THREE.Points(pointsGeo, pointsMat));
+
+// 球体粒子单独渲染层 (NormalBlending) ——
+// 同样是本体粒子,但走 alpha 混合而非加法混合,重叠不再叠加变亮。
+const SPHERE_LAYER_MAX = 1600;
+const sphereLayerPos = new Float32Array(SPHERE_LAYER_MAX * 3);
+const sphereLayerCol = new Float32Array(SPHERE_LAYER_MAX * 3);
+const sphereLayerGeo = new THREE.BufferGeometry();
+const sphereLayerPosAttr = new THREE.BufferAttribute(sphereLayerPos, 3);
+const sphereLayerColAttr = new THREE.BufferAttribute(sphereLayerCol, 3);
+sphereLayerPosAttr.setUsage(THREE.DynamicDrawUsage);
+sphereLayerColAttr.setUsage(THREE.DynamicDrawUsage);
+sphereLayerGeo.setAttribute('position', sphereLayerPosAttr);
+sphereLayerGeo.setAttribute('color',    sphereLayerColAttr);
+sphereLayerGeo.setDrawRange(0, 0);
+const sphereLayerMat = new THREE.PointsMaterial({
+  size: 0.1, vertexColors: true, sizeAttenuation: true,
+  transparent: true, opacity: 0.95,
+  blending: THREE.NormalBlending, depthWrite: false
+});
+const sphereLayer = new THREE.Points(sphereLayerGeo, sphereLayerMat);
+scene.add(sphereLayer);
+
+const linePositions = new Float32Array(MAX_LINES * 6);
+const lineColors    = new Float32Array(MAX_LINES * 6);
+const lineGeo = new THREE.BufferGeometry();
+const linePosAttr = new THREE.BufferAttribute(linePositions, 3);
+const lineColAttr = new THREE.BufferAttribute(lineColors,    3);
+linePosAttr.setUsage(THREE.DynamicDrawUsage);
+lineColAttr.setUsage(THREE.DynamicDrawUsage);
+lineGeo.setAttribute('position', linePosAttr);
+lineGeo.setAttribute('color',    lineColAttr);
+const lineMat = new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 0.05,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+const lines = new THREE.LineSegments(lineGeo, lineMat);
+scene.add(lines);
+const points = scene.children[0];
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H),
+  /* strength  */ 0.7,
+  /* radius    */ 0.25,
+  /* threshold */ 0.35
+));
+composer.addPass(new OutputPass());
+
+const noise3D = createNoise3D();
+const hashCells = new Map();
+function hashKey(cx, cy, cz) { return ((cx + 512) * 1024 + (cy + 512)) * 1024 + (cz + 512); }
+
+// ════════ 光环纹理 + HTML 标签渲染器 ════════
+const haloTex = (() => {
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  g.addColorStop(0,    'rgba(255,255,255,1)');
+  g.addColorStop(0.25, 'rgba(255,255,255,0.4)');
+  g.addColorStop(1,    'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(c);
+})();
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(W, H);
+Object.assign(labelRenderer.domElement.style, {
+  position: 'absolute', top: '0', left: '0', pointerEvents: 'none'
+});
+container.appendChild(labelRenderer.domElement);
+
+const COL_PROFIT = new THREE.Color(0xffffff);
+const COL_LOSS   = new THREE.Color(0xff5050);
+
+// ════════ BUY / SELL events: spheres made of body particles ════════
+// 球体由本体粒子聚合而成,sell 后粒子溶回原始位置 — 不创建任何新 mesh。
+// 后端接入后调 window.__c_triggerBuy(t) / window.__c_triggerSell(t)。
+const eventSpheres = [];
+const eventSphereById = new Map();
+const claimedBy = new Int32Array(POINT_COUNT).fill(-1);
+const claimDim  = new Float32Array(POINT_COUNT).fill(1); // 1 = 全亮, →0 = 沉默
+let __sphereId = 0;
+
+const SPHERE_PARTICLES_TARGET = 220;
+const SPHERE_RADIUS      = 2.2;
+const FORM_DURATION      = 0.6;
+const DISSOLVE_DURATION  = 1.6;
+
+function spawnEventSphere(now, trade = null) {
+  // 锚点:挑一个中层粒子 — 球体外缘 = anchor + 0.85R + R,
+  // 限制 anchor 半径,保证球体始终落在 panelC 横向可视范围内。
+  const ANCHOR_R_MIN_SQ = (CLOUD_RADIUS * 0.40) ** 2;
+  const ANCHOR_R_MAX_SQ = (CLOUD_RADIUS * 0.55) ** 2;
+  let anchorIdx = -1, bestD = -1;
+  for (let n = 0; n < 80; n++) {
+    const i = Math.floor(Math.random() * POINT_COUNT);
+    if (claimedBy[i] !== -1) continue;
+    const o = i*3;
+    const d = origPositions[o]*origPositions[o] + origPositions[o+1]*origPositions[o+1] + origPositions[o+2]*origPositions[o+2];
+    if (d < ANCHOR_R_MIN_SQ || d > ANCHOR_R_MAX_SQ) continue;
+    if (d > bestD) { bestD = d; anchorIdx = i; }
+  }
+  // 兜底:在上限以内挑最远的未占用粒子
+  if (anchorIdx === -1) {
+    for (let i = 0; i < POINT_COUNT; i++) {
+      if (claimedBy[i] !== -1) continue;
+      const o = i*3;
+      const d = origPositions[o]*origPositions[o] + origPositions[o+1]*origPositions[o+1] + origPositions[o+2]*origPositions[o+2];
+      if (d <= ANCHOR_R_MAX_SQ && d > bestD) { bestD = d; anchorIdx = i; }
+    }
+    if (anchorIdx === -1) return;
+  }
+
+  const ax = origPositions[anchorIdx*3];
+  const ay = origPositions[anchorIdx*3+1];
+  const az = origPositions[anchorIdx*3+2];
+  const aLen = Math.sqrt(ax*ax + ay*ay + az*az) || 1;
+  // 球体半径按持仓 / 账户比例缩放 (stake/balance 映射到 0.9 ~ 2.7)
+  const sphereR = trade
+    ? 0.9 + 18 * Math.min(0.10, (trade.stake || 0) / Math.max(1, Trader?.balance || 10000))
+    : SPHERE_RADIUS;
+  // 球心沿径向向外延伸,使球从外壳"长出"
+  const ext = sphereR * 0.85;
+  const cx = ax + (ax/aLen) * ext;
+  const cy = ay + (ay/aLen) * ext;
+  const cz = az + (az/aLen) * ext;
+
+  // 选择最近的 N 个未被占用粒子(按 origPositions 距离)
+  const dists = [];
+  for (let i = 0; i < POINT_COUNT; i++) {
+    if (claimedBy[i] !== -1) continue;
+    const o = i*3;
+    const dx = origPositions[o]   - ax;
+    const dy = origPositions[o+1] - ay;
+    const dz = origPositions[o+2] - az;
+    dists.push([dx*dx+dy*dy+dz*dz, i]);
+  }
+  dists.sort((u, v) => u[0] - v[0]);
+
+  const N = Math.min(SPHERE_PARTICLES_TARGET, dists.length);
+  const indices = new Int32Array(N);
+  const targets = new Float32Array(N * 3);
+  const id = __sphereId++;
+
+  // 最近的 STALK_COUNT 个粒子分布在 anchor→球心 的茎秆上,
+  // 形成可见的"长出"分支;其余分配到球壳。
+  const STALK_COUNT = 50;
+  const sax = ax - cx, say = ay - cy, saz = az - cz; // 球心→锚点 偏移
+  for (let k = 0; k < N; k++) {
+    const i = dists[k][1];
+    indices[k] = i;
+    claimedBy[i] = id;
+    if (k < STALK_COUNT) {
+      // f=1 接近锚点(本体侧),f=0 接近球心
+      const f = 1 - (k + 0.5) / STALK_COUNT;
+      targets[k*3]   = sax * f + (Math.random()-0.5) * 0.45;
+      targets[k*3+1] = say * f + (Math.random()-0.5) * 0.45;
+      targets[k*3+2] = saz * f + (Math.random()-0.5) * 0.45;
+    } else {
+      let ux, uy, uz, l;
+      do {
+        ux = Math.random()*2-1; uy = Math.random()*2-1; uz = Math.random()*2-1;
+        l = ux*ux+uy*uy+uz*uz;
+      } while (l > 1 || l < 1e-4);
+      const norm = Math.sqrt(l);
+      const r = sphereR * (0.55 + 0.45 * Math.pow(Math.random(), 0.6));
+      targets[k*3]   = ux/norm * r;
+      targets[k*3+1] = uy/norm * r;
+      targets[k*3+2] = uz/norm * r;
+    }
+  }
+
+  const sph = { id, indices, targets, cx, cy, cz, radius: sphereR, birth: now, death: null, weight: 0 };
+
+  // 价格:Trader 事件触发 → 用真实 trade 数据; 手动调试 → 合成漂移
+  if (trade) {
+    sph.tradeId      = trade.id;
+    sph.entryPrice   = trade.entry;
+    sph.currentPrice = trade.mark;
+    sph.symbol       = trade.sym;
+    tradeIdToSphere.set(trade.id, sph);
+  } else {
+    sph.entryPrice   = 0.40 + Math.random() * 0.25;
+    sph.priceSeed    = Math.random() * 100;
+    sph.currentPrice = sph.entryPrice;
+    sph.symbol       = '';
+  }
+
+  // 光环 sprite (盈利白 / 亏损红)
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: haloTex, color: 0xffffff,
+    transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  halo.scale.set(sphereR * 0.55, sphereR * 0.55, 1);
+  halo.position.set(cx, cy, cz);
+  points.add(halo);
+  sph.halo = halo;
+
+  // HTML 悬浮标签 (点击弹出详情 modal)
+  const lblDiv = document.createElement('div');
+  lblDiv.className = 'sphere-label';
+  lblDiv.style.pointerEvents = 'auto';
+  lblDiv.style.cursor = 'pointer';
+  lblDiv.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    window.__showCoinModal?.(sph);
+  });
+  const lblObj = new CSS2DObject(lblDiv);
+  lblObj.position.set(cx, cy + sphereR * 1.4, cz);
+  points.add(lblObj);
+  sph.labelDiv = lblDiv;
+  sph.label = lblObj;
+
+  eventSpheres.push(sph);
+  eventSphereById.set(id, sph);
+}
+
+function startSell(now) {
+  for (const s of eventSpheres) if (s.death === null) { s.death = now; return; }
+}
+
+function updateEventSpheres(now) {
+  // weight + cleanup
+  for (let s = eventSpheres.length - 1; s >= 0; s--) {
+    const sph = eventSpheres[s];
+    if (sph.death === null) {
+      sph.weight = Math.min(1, (now - sph.birth) / FORM_DURATION);
+    } else {
+      const dage = now - sph.death;
+      if (dage >= DISSOLVE_DURATION) {
+        for (let k = 0; k < sph.indices.length; k++) {
+          claimedBy[sph.indices[k]] = -1;
+          claimDim[sph.indices[k]] = 1;
+        }
+        if (sph.halo) { points.remove(sph.halo); sph.halo.material.dispose(); }
+        if (sph.label) {
+          points.remove(sph.label);
+          if (sph.labelDiv.parentNode) sph.labelDiv.parentNode.removeChild(sph.labelDiv);
+        }
+        if (sph.tradeId != null) tradeIdToSphere.delete(sph.tradeId);
+        eventSphereById.delete(sph.id);
+        eventSpheres.splice(s, 1);
+        continue;
+      }
+      sph.weight = 1 - dage / DISSOLVE_DURATION;
+    }
+  }
+
+  // 更新连线衰减:认领粒子越深,穿过它的线越淡(避免线体加亮污染球体)
+  for (const sph of eventSpheres) {
+    const dim = 1 - sph.weight * 0.85;
+    for (let k = 0; k < sph.indices.length; k++) claimDim[sph.indices[k]] = dim;
+  }
+
+  // Halo + 标签更新 (价格从 Trader 同步)
+  const fmtP = v => v < 1e-5 ? v.toExponential(2) : v < 1e-3 ? v.toFixed(7) : v < 1 ? v.toFixed(4) : v.toFixed(3);
+  for (const sph of eventSpheres) {
+    let traderPnl = null;
+    if (sph.tradeId != null) {
+      const trade = Trader.positions.find(p => p.id === sph.tradeId);
+      if (trade) {
+        sph.currentPrice = trade.mark;
+        traderPnl = trade.pnl;
+      }
+    } else if (sph.priceSeed != null) {
+      sph.currentPrice = sph.entryPrice + Math.sin(now * 0.8 + sph.priceSeed) * 0.04;
+    }
+    const pnl = sph.currentPrice - sph.entryPrice;
+    const profit = (traderPnl != null ? traderPnl : pnl) >= 0;
+
+    if (sph.halo) {
+      sph.halo.material.color.lerp(profit ? COL_PROFIT : COL_LOSS, 0.12);
+      // 盈利全亮 0.25,亏损较弱 0.15
+      sph.halo.material.opacity = (profit ? 0.25 : 0.15) * sph.weight;
+      sph.halo.position.set(sph.cx, sph.cy, sph.cz);
+      // 尺寸:白光维持紧凑 0.55R, 红光略超出球边缘 ~2.3R
+      const targetScale = (profit ? 0.55 : 2.3) * sph.radius;
+      const s = sph.halo.scale.x + (targetScale - sph.halo.scale.x) * 0.12;
+      sph.halo.scale.set(s, s, 1);
+    }
+    if (sph.label) {
+      sph.label.position.set(sph.cx, sph.cy + SPHERE_RADIUS * 1.4, sph.cz);
+      sph.labelDiv.style.opacity = sph.weight;
+      const pnlLabel = traderPnl != null
+        ? (traderPnl >= 0 ? '+$' : '−$') + Math.abs(traderPnl).toFixed(2)
+        : (pnl >= 0 ? '+' : '') + pnl.toFixed(4);
+      sph.labelDiv.innerHTML =
+        (sph.symbol ? `<div class="lbl-sym">${sph.symbol}</div>` : '') +
+        `<div class="lbl-entry">ENTRY ${fmtP(sph.entryPrice)}</div>` +
+        `<div class="lbl-mkt">MARK ${fmtP(sph.currentPrice)}</div>` +
+        `<div class="${profit ? 'pnl-pos' : 'pnl-neg'}">${pnlLabel}</div>`;
+    }
+  }
+
+  // 混合:本体noise位置 ↔ 球体目标位置 (按 weight 插值)
+  const wobble = 0.04 * Math.sin(now * 4);
+  for (const sph of eventSpheres) {
+    const w = sph.weight;
+    if (w <= 0) continue;
+    for (let k = 0; k < sph.indices.length; k++) {
+      const i = sph.indices[k];
+      const o = i*3, to = k*3;
+      const tx = sph.cx + sph.targets[to]   * (1 + wobble);
+      const ty = sph.cy + sph.targets[to+1] * (1 + wobble);
+      const tz = sph.cz + sph.targets[to+2] * (1 + wobble);
+      curPositions[o]   = curPositions[o]   * (1 - w) + tx * w;
+      curPositions[o+1] = curPositions[o+1] * (1 - w) + ty * w;
+      curPositions[o+2] = curPositions[o+2] * (1 - w) + tz * w;
+    }
+  }
+
+  // 写入独立 NormalBlending 层 — 重叠粒子互相覆盖而非相加
+  let wIdx = 0;
+  for (const sph of eventSpheres) {
+    if (sph.weight <= 0) continue;
+    let glow;
+    if (sph.death === null) {
+      const age = now - sph.birth;
+      glow = age < 0.6
+        ? 0.0583 + 0.0667 * Math.abs(Math.sin(age * 14))
+        : 0.0875 + 0.0125 * Math.sin(now * 5);
+    } else {
+      glow = 0.0458 * (1 - (now - sph.death) / DISSOLVE_DURATION);
+    }
+    const g = glow * sph.weight;
+    for (let k = 0; k < sph.indices.length; k++) {
+      if (wIdx >= SPHERE_LAYER_MAX) break;
+      const i = sph.indices[k];
+      const o = i*3, wo = wIdx*3;
+      sphereLayerPos[wo]   = curPositions[o];
+      sphereLayerPos[wo+1] = curPositions[o+1];
+      sphereLayerPos[wo+2] = curPositions[o+2];
+      sphereLayerCol[wo]   = pointColors[o]   * g;
+      sphereLayerCol[wo+1] = pointColors[o+1] * g;
+      sphereLayerCol[wo+2] = pointColors[o+2] * g;
+      wIdx++;
+    }
+  }
+  sphereLayerGeo.setDrawRange(0, wIdx);
+  sphereLayerPosAttr.needsUpdate = true;
+  sphereLayerColAttr.needsUpdate = true;
+}
+
+// ── Trader 事件订阅 (C 球体生灭由真实交易驱动) ──
+const tradeIdToSphere = new Map();
+Trader.on('open',  (trade) => spawnEventSphere(clock.getElapsedTime(), trade));
+Trader.on('close', (trade) => {
+  const sph = tradeIdToSphere.get(trade.id);
+  if (sph && sph.death === null) sph.death = clock.getElapsedTime();
+});
+Trader.on('halt',  () => {
+  const t = clock.getElapsedTime();
+  for (const s of eventSpheres) if (s.death === null) s.death = t;
+});
+
+// 调试 hook (手动触发无 trade 的匿名球)
+window.__c_triggerBuy  = () => spawnEventSphere(clock.getElapsedTime());
+window.__c_triggerSell = () => startSell(clock.getElapsedTime());
+
+const clock = new THREE.Clock();
+let __prevT = 0;
+function frame() {
+  const t = clock.getElapsedTime();
+  const dt = Math.min(0.1, t - __prevT);
+  __prevT = t;
+  const tN = t * NOISE_TIME_SPEED;
+
+  for (let i = 0; i < POINT_COUNT; i++) {
+    const o = i * 3;
+    const ox = origPositions[o], oy = origPositions[o+1], oz = origPositions[o+2];
+    curPositions[o]   = ox + noise3D(ox*NOISE_SCALE,     oy*NOISE_SCALE,     tN)       * NOISE_AMP;
+    curPositions[o+1] = oy + noise3D(oy*NOISE_SCALE+37,  oz*NOISE_SCALE+37,  tN+100)   * NOISE_AMP;
+    curPositions[o+2] = oz + noise3D(oz*NOISE_SCALE+73,  ox*NOISE_SCALE+73,  tN+200)   * NOISE_AMP;
+  }
+  updateEventSpheres(t);
+  pointsGeo.attributes.position.needsUpdate = true;
+
+  hashCells.clear();
+  const cell = LINE_THRESHOLD;
+  for (let i = 0; i < POINT_COUNT; i++) {
+    const o = i * 3;
+    const cx = Math.floor(curPositions[o]/cell),
+          cy = Math.floor(curPositions[o+1]/cell),
+          cz = Math.floor(curPositions[o+2]/cell);
+    const k = hashKey(cx, cy, cz);
+    let bucket = hashCells.get(k);
+    if (!bucket) { bucket = []; hashCells.set(k, bucket); }
+    bucket.push(i);
+  }
+
+  let lineIdx = 0;
+  neighborCount.fill(0);
+  for (let i = 0; i < POINT_COUNT && lineIdx < MAX_LINES; i++) {
+    const o = i * 3;
+    const xi = curPositions[o], yi = curPositions[o+1], zi = curPositions[o+2];
+    const cx = Math.floor(xi/cell), cy = Math.floor(yi/cell), cz = Math.floor(zi/cell);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+      const bucket = hashCells.get(hashKey(cx+dx, cy+dy, cz+dz));
+      if (!bucket) continue;
+      for (let m = 0, len = bucket.length; m < len; m++) {
+        const j = bucket[m];
+        if (j <= i) continue;
+        const jo = j * 3;
+        const ddx = curPositions[jo]-xi, ddy = curPositions[jo+1]-yi, ddz = curPositions[jo+2]-zi;
+        const dsq = ddx*ddx + ddy*ddy + ddz*ddz;
+        if (dsq < LINE_THRESHOLD_SQ && lineIdx < MAX_LINES) {
+          const lo = lineIdx * 6;
+          linePositions[lo]=xi; linePositions[lo+1]=yi; linePositions[lo+2]=zi;
+          linePositions[lo+3]=curPositions[jo]; linePositions[lo+4]=curPositions[jo+1]; linePositions[lo+5]=curPositions[jo+2];
+          const mi = claimDim[i], mj = claimDim[j];
+          lineColors[lo]=pointColors[o]*mi; lineColors[lo+1]=pointColors[o+1]*mi; lineColors[lo+2]=pointColors[o+2]*mi;
+          lineColors[lo+3]=pointColors[jo]*mj; lineColors[lo+4]=pointColors[jo+1]*mj; lineColors[lo+5]=pointColors[jo+2]*mj;
+          lineIdx++;
+          neighborCount[i]++; neighborCount[j]++;
+        }
+      }
+    }
+  }
+  linePosAttr.needsUpdate = true;
+  lineColAttr.needsUpdate = true;
+  lineGeo.setDrawRange(0, lineIdx * 2);
+
+  const CLUSTER_DIM = 0.18;
+  for (let i = 0; i < POINT_COUNT; i++) {
+    const o = i * 3;
+    let mul;
+    if (neighborCount[i] > 0) {
+      mul = CLUSTER_DIM;
+    } else {
+      mul = 0.25 + 0.85 * Math.abs(Math.sin(t * 3.2 + i * 0.41));
+    }
+    if (claimedBy[i] !== -1) {
+      const sph = eventSphereById.get(claimedBy[i]);
+      if (sph) {
+        // body(additive) 通道淡出,转交 sphereLayer(normal) 接管
+        mul = mul * (1 - sph.weight);
+      }
+    }
+    displayPointColors[o]   = pointColors[o]   * mul;
+    displayPointColors[o+1] = pointColors[o+1] * mul;
+    displayPointColors[o+2] = pointColors[o+2] * mul;
+  }
+  pointsGeo.attributes.color.needsUpdate = true;
+
+  const rotY = t * 0.06;
+  const rotX = Math.sin(t * 0.04) * 0.25;
+  points.rotation.y = lines.rotation.y = sphereLayer.rotation.y = rotY;
+  points.rotation.x = lines.rotation.x = sphereLayer.rotation.x = rotX;
+
+  composer.render();
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+window.addEventListener('resize', () => {
+  W = container.clientWidth;
+  H = container.clientHeight;
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+  renderer.setSize(W, H);
+  composer.setSize(W, H);
+  labelRenderer.setSize(W, H);
+});
+
+const okDot = document.getElementById('__c_ok');
+if (okDot) { okDot.textContent = 'WEBGL ✓'; okDot.style.color = '#4dffd2'; }
+frame();
+</script>
+
+<!-- Coin info modal -->
+<div id="coinModal" class="coin-modal" style="display:none">
+  <div class="coin-modal-backdrop"></div>
+  <div class="coin-modal-card">
+    <button class="coin-modal-close" type="button">✕</button>
+    <div id="coinModalContent"></div>
+  </div>
+</div>
+</body>
+</html>
