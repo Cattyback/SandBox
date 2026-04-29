@@ -1,5 +1,6 @@
 # Resistance
 
+##original file: https://docs.google.com/document/d/14LSmE1XKg4zP9mKG064AYQdxZTF2p6zFv1QJWmZcFsQ/edit?usp=sharing
 ## Resistance Record 1: Particle Flower
 
 **What the AI produced:** I asked the AI to use particles to create a flower shape where the petals randomly shimmer and morph. The AI generated a parametric petal system with flickering animations and constant shape shifting. The result was a glowing, pulsating flower made of particles.
