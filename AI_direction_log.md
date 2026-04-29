@@ -1,6 +1,6 @@
 # AI Direction Log
 
-## 小夔子
+#original file with photos:https://docs.google.com/document/d/1Sv7TgM5nDyBi-Bj_qgbmscdKmmd_bHqVOHU-c6f0RHA/edit?usp=sharing 
 
 ### Record 1: Particle Visuals
 
