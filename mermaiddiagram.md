@@ -10,20 +10,20 @@ graph TD
         Trader[Trader: positions, balance, drawdown, strategy mode, trade history]
     end
  
-    subgraph Panel A - User Control
+    subgraph PanelA [Panel A - User Control]
         PauseBtn[PAUSE ENGINE]
         StopAll[STOP ALL]
         ResumeBtn[RESUME]
     end
  
-    subgraph Panel B - Particle Field
+    subgraph PanelB [Panel B - Particle Field]
         Particles[Three.js Particle Cloud]
         PnLFloat[Floating PnL Number]
         DipoleToggle[DIPOLE MODEL Toggle]
         BottomStats[ACTIVE / FILLS / AVG HOLD / THRU]
     end
  
-    subgraph Panel C - Data Tracking Monitor
+    subgraph PanelC [Panel C - Data Tracking Monitor]
         PnLCurve[PnL Curve + ROI + Balance]
         Bayes[Bayesian Model]
         SpreadZ[Spread Z-Score]
