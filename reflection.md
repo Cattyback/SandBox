@@ -1,5 +1,6 @@
 # Reflection
 
+# Original file: https://docs.google.com/document/d/17Y96o3-yq3v37FuiVtiQMGHL4PjtEanhVfLmLrRlapg/edit?usp=sharing 
 ## 1. Can I defend this work? Can I explain every major decision in the project?
 
 Yes. Every decision traces back to a single question: Could my friend, half awake and groggy at 3:00 AM, look at this screen and clearly understand what his bot is doing? The three panel division isn't arbitrary, it corresponds to the three things an operator truly needs: a way to stop everything, a way to see what the bot is doing, and a way to know if the system is still "alive." The emergency stop is on the left because it is the most critical operation and the final line of defense for human intervention. The particle cloud, generating spheres on buys and dissipating them on sells it provides a more intuitive visualization of the trades happening behind the engine. The monochrome palette exists because color must have meaning. If everything is cyan, nothing is urgent.
