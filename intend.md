@@ -1,5 +1,6 @@
 # Intent
 
+original file:https://docs.google.com/document/d/1OFBZqK2lhAJ3Q_gULIA8n3Zryjvpk7NsVRc2LL8pvPc/edit?usp=sharing
 A real-time control room for a friend's crypto-trading bot. The bot automatically opens and closes positions through quantitative calculations. My goal is to design a UI for it so the operator can see what the bot is thinking, what the market is doing, and step in when something goes wrong.
 
 I chose this domain because the bot is real, the operator is real, and "making trading state clear and readable without overwhelming the user" is a problem I actually care about, not a made-up one. Every UI decision in this project is held to one standard: my friend should be able to look at this screen, understand what his bot is doing, and manually flatten all positions and shut down all trades immediately if needed.
