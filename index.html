@@ -330,11 +330,12 @@ const points = scene.children[0];
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H),
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(W, H),
   /* strength  */ 0.7,
   /* radius    */ 0.25,
   /* threshold */ 0.35
-));
+);
+composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
 
 const noise3D = createNoise3D();
@@ -637,6 +638,16 @@ function updateEventSpheres(now) {
   sphereLayerColAttr.needsUpdate = true;
 }
 
+// ── Halt drain state (kill switch 触发时引擎"枯竭"视觉) ──
+let _haltedTarget = 0;          // 0 = normal, 1 = fully halted
+let _haltLerp     = 0;          // 平滑插值,逐帧逼近 _haltedTarget
+let _simT         = 0;          // 仿真时钟,halt 时停摆 → 粒子运动/旋转冻结
+const _BLOOM_BASE          = 0.7;
+const _POINTS_OPACITY_BASE = pointsMat.opacity;
+const _LINE_OPACITY_BASE   = lineMat.opacity;
+window.__c_haltAll       = () => { _haltedTarget = 1; };
+window.__c_resumeTrading = () => { _haltedTarget = 0; };
+
 // ── Trader 事件订阅 (C 球体生灭由真实交易驱动) ──
 const tradeIdToSphere = new Map();
 Trader.on('open',  (trade) => spawnEventSphere(clock.getElapsedTime(), trade));
@@ -647,7 +658,9 @@ Trader.on('close', (trade) => {
 Trader.on('halt',  () => {
   const t = clock.getElapsedTime();
   for (const s of eventSpheres) if (s.death === null) s.death = t;
+  _haltedTarget = 1;
 });
+Trader.on('resume', () => { _haltedTarget = 0; });
 
 // 调试 hook (手动触发无 trade 的匿名球)
 window.__c_triggerBuy  = () => spawnEventSphere(clock.getElapsedTime());
@@ -659,14 +672,23 @@ function frame() {
   const t = clock.getElapsedTime();
   const dt = Math.min(0.1, t - __prevT);
   __prevT = t;
-  const tN = t * NOISE_TIME_SPEED;
+
+  // Halt drain: bloom 衰减、连线消失、粒子噪声减弱、_simT 冻结(运动/旋转停摆)
+  _haltLerp += (_haltedTarget - _haltLerp) * Math.min(1, dt * 1.2);
+  const live = 1 - _haltLerp;
+  _simT += dt * live;
+  bloomPass.strength    = _BLOOM_BASE * (0.12 + 0.88 * live);
+  pointsMat.opacity     = _POINTS_OPACITY_BASE * (0.30 + 0.70 * live);
+  lineMat.opacity       = _LINE_OPACITY_BASE * live;
+  const noiseAmp = NOISE_AMP * (0.20 + 0.80 * live);
+  const tN = _simT * NOISE_TIME_SPEED;
 
   for (let i = 0; i < POINT_COUNT; i++) {
     const o = i * 3;
     const ox = origPositions[o], oy = origPositions[o+1], oz = origPositions[o+2];
-    curPositions[o]   = ox + noise3D(ox*NOISE_SCALE,     oy*NOISE_SCALE,     tN)       * NOISE_AMP;
-    curPositions[o+1] = oy + noise3D(oy*NOISE_SCALE+37,  oz*NOISE_SCALE+37,  tN+100)   * NOISE_AMP;
-    curPositions[o+2] = oz + noise3D(oz*NOISE_SCALE+73,  ox*NOISE_SCALE+73,  tN+200)   * NOISE_AMP;
+    curPositions[o]   = ox + noise3D(ox*NOISE_SCALE,     oy*NOISE_SCALE,     tN)       * noiseAmp;
+    curPositions[o+1] = oy + noise3D(oy*NOISE_SCALE+37,  oz*NOISE_SCALE+37,  tN+100)   * noiseAmp;
+    curPositions[o+2] = oz + noise3D(oz*NOISE_SCALE+73,  ox*NOISE_SCALE+73,  tN+200)   * noiseAmp;
   }
   updateEventSpheres(t);
   pointsGeo.attributes.position.needsUpdate = true;
@@ -723,7 +745,7 @@ function frame() {
     if (neighborCount[i] > 0) {
       mul = CLUSTER_DIM;
     } else {
-      mul = 0.25 + 0.85 * Math.abs(Math.sin(t * 3.2 + i * 0.41));
+      mul = 0.25 + 0.85 * Math.abs(Math.sin(_simT * 3.2 + i * 0.41));
     }
     if (claimedBy[i] !== -1) {
       const sph = eventSphereById.get(claimedBy[i]);
@@ -738,8 +760,8 @@ function frame() {
   }
   pointsGeo.attributes.color.needsUpdate = true;
 
-  const rotY = t * 0.06;
-  const rotX = Math.sin(t * 0.04) * 0.25;
+  const rotY = _simT * 0.06;
+  const rotX = Math.sin(_simT * 0.04) * 0.25;
   points.rotation.y = lines.rotation.y = sphereLayer.rotation.y = rotY;
   points.rotation.x = lines.rotation.x = sphereLayer.rotation.x = rotX;
 
