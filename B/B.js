@@ -244,32 +244,23 @@ function drawPnL() {
   ctx.setLineDash([]);
 }
 
-function renderTradeRanking() {
-  const el = document.getElementById('rankTradesRows');
+function renderTradeHistory() {
+  const el = document.getElementById('tradeHistoryRows');
   if (!el) return;
-  const trades = window.Trader?.closedTrades || [];
+  const trades = (window.Trader?.closedTrades || []).slice().reverse();
   if (trades.length === 0) {
     el.innerHTML = '<div class="op-empty">no closed trades</div>';
     return;
   }
-  // 按币种聚合本次 session 实现盈亏
-  const bySymbol = {};
-  for (const t of trades) {
-    const s = bySymbol[t.sym] ||= { sym: t.sym, total: 0, count: 0, wins: 0 };
-    s.total += t.realizedPnl;
-    s.count++;
-    if (t.wasProfit) s.wins++;
-  }
-  const ranked = Object.values(bySymbol)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10);
-  el.innerHTML = ranked.map(r => {
-    const cls  = r.total >= 0 ? 'sg' : 'sr';
-    const sign = r.total >= 0 ? '+' : '−';
+  el.innerHTML = trades.slice(0, 12).map(t => {
+    const d   = new Date(t.closeTs);
+    const ts  = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+    const cls  = t.wasProfit ? 'sg' : 'sr';
+    const sign = t.wasProfit ? '+' : '−';
     return `<div class="rank-row">
-      <span class="rk-sym">${r.sym}</span>
-      <span class="rk-trades">${r.count}t</span>
-      <span class="rk-pnl ${cls}">${sign}$${Math.abs(r.total).toFixed(2)}</span>
+      <span class="rk-sym">${ts}</span>
+      <span class="rk-trades">${t.sym}</span>
+      <span class="rk-pnl ${cls}">${sign}$${Math.abs(t.realizedPnl).toFixed(2)}</span>
     </div>`;
   }).join('');
 }
@@ -343,7 +334,7 @@ function renderOpenPositions() {
     const cls     = p.pnl >= 0 ? 'sg' : 'sr';
     const sign    = p.pnl >= 0 ? '+' : '−';
     const pctSign = p.pnlPct >= 0 ? '+' : '−';
-    return `<div class="big-pos-row">
+    return `<div class="big-pos-row" data-sym="${p.sym}" style="cursor:pointer">
       <div class="bpr-top">
         <span class="bpr-sym">${p.sym}</span>
         <span class="bpr-side">${p.side}</span>
@@ -355,6 +346,14 @@ function renderOpenPositions() {
       </div>
     </div>`;
   }).join('');
+
+  el.querySelectorAll('.big-pos-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const sym = row.dataset.sym;
+      const trade = (window.Trader?.positions || []).find(t => t.sym === sym);
+      window.__showCoinModal?.({ symbol: sym, tradeId: trade?.id ?? null });
+    });
+  });
 }
 
 // ════════════════════════════════════════════

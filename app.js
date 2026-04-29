@@ -54,7 +54,7 @@ function masterTick() {
   renderSignals();
   renderBots();
   renderOpenPositions();
-  renderTradeRanking();
+  renderTradeHistory();
   updateApiPanel();
   buildTicker();
 
@@ -125,7 +125,7 @@ window.addEventListener('DOMContentLoaded', () => {
   drawPnL();
   renderBots();
   renderOpenPositions();
-  renderTradeRanking();
+  renderTradeHistory();
   renderLog();
   renderFactors();
   renderSignals();
