@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alice · Personal Site</title>
+<meta name="description" content="Alice's personal website — about, projects, resume, contact.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="bg-grid"></canvas>
+
+<header class="nav" id="nav">
+  <a href="#top" class="nav-brand">alice<span class="dot">.</span></a>
+  <nav class="nav-links">
+    <a href="#about" data-section="about">About</a>
+    <a href="#projects" data-section="projects">Projects</a>
+    <a href="#resume" data-section="resume">Resume</a>
+    <a href="#contact" data-section="contact">Contact</a>
+  </nav>
+</header>
+
+<main>
+
+  <section id="top" class="hero">
+    <p class="eyebrow">// hello world</p>
+    <h1>I'm <span class="accent">Alice</span>.<br>I build things and figure out how they work.</h1>
+    <p class="hero-sub">这是我的个人主页占位版 —— 名字、简介、项目和经历都还是初稿，欢迎直接改成你自己的话。</p>
+    <div class="hero-cta">
+      <a href="#projects" class="btn btn-primary">查看项目</a>
+      <a href="#contact" class="btn btn-ghost">联系我</a>
+    </div>
+  </section>
+
+  <section id="about" class="section">
+    <h2 class="section-title"><span class="section-num">01</span> About</h2>
+    <div class="about-grid">
+      <div class="about-text">
+        <p>
+          我是 Alice，喜欢把想法快速做成能跑起来的东西。这段文字是占位内容 —— 可以写你的背景、
+          关注的方向、正在学的东西，或者任何你想让访客第一眼了解你的信息。
+        </p>
+        <p>
+          （提示：把这两段换成真实的自我介绍，风格可以随意，第一人称、口语化都没问题。）
+        </p>
+      </div>
+      <ul class="about-facts">
+        <li><span>坐标</span><em>TODO</em></li>
+        <li><span>方向</span><em>TODO</em></li>
+        <li><span>正在做</span><em>TODO</em></li>
+        <li><span>状态</span><em>Open to chat</em></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="projects" class="section">
+    <h2 class="section-title"><span class="section-num">02</span> Projects</h2>
+    <div class="projects-grid">
+      <article class="project-card placeholder">
+        <div class="project-card-top">
+          <span class="project-tag">占位</span>
+        </div>
+        <h3>项目名称 #1</h3>
+        <p>一句话描述这个项目在做什么、解决了什么问题。</p>
+        <div class="project-links">
+          <a href="#" class="project-link disabled">Demo</a>
+          <a href="#" class="project-link disabled">Code</a>
+        </div>
+      </article>
+      <article class="project-card placeholder">
+        <div class="project-card-top">
+          <span class="project-tag">占位</span>
+        </div>
+        <h3>项目名称 #2</h3>
+        <p>一句话描述这个项目在做什么、解决了什么问题。</p>
+        <div class="project-links">
+          <a href="#" class="project-link disabled">Demo</a>
+          <a href="#" class="project-link disabled">Code</a>
+        </div>
+      </article>
+      <article class="project-card placeholder">
+        <div class="project-card-top">
+          <span class="project-tag">占位</span>
+        </div>
+        <h3>项目名称 #3</h3>
+        <p>一句话描述这个项目在做什么、解决了什么问题。</p>
+        <div class="project-links">
+          <a href="#" class="project-link disabled">Demo</a>
+          <a href="#" class="project-link disabled">Code</a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="resume" class="section">
+    <h2 class="section-title"><span class="section-num">03</span> Resume</h2>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <p class="timeline-date">TODO — 年份</p>
+          <h3>职位 / 学校名称</h3>
+          <p>一两句描述做了什么、学了什么。</p>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <p class="timeline-date">TODO — 年份</p>
+          <h3>职位 / 学校名称</h3>
+          <p>一两句描述做了什么、学了什么。</p>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <p class="timeline-date">TODO — 年份</p>
+          <h3>职位 / 学校名称</h3>
+          <p>一两句描述做了什么、学了什么。</p>
+        </div>
+      </div>
+    </div>
+    <div class="skills">
+      <span class="skill-pill">TODO</span>
+      <span class="skill-pill">技能</span>
+      <span class="skill-pill">标签</span>
+      <span class="skill-pill">随便加</span>
+    </div>
+  </section>
+
+  <section id="contact" class="section">
+    <h2 class="section-title"><span class="section-num">04</span> Contact</h2>
+    <div class="contact-box">
+      <p class="contact-lede">有想聊的项目、合作，或者只是想打个招呼？</p>
+      <div class="contact-links">
+        <a href="mailto:alicezhen1019@gmail.com" class="contact-link">
+          <span class="contact-label">Email</span>
+          <span class="contact-value">alicezhen1019@gmail.com</span>
+        </a>
+        <a href="https://github.com/Cattyback" target="_blank" rel="noopener" class="contact-link">
+          <span class="contact-label">GitHub</span>
+          <span class="contact-value">github.com/Cattyback</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>Built with vibe coding · <span id="year"></span></p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
